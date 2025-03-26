@@ -119,6 +119,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create initial boundaries
     createBoundaries();
     
+    // Setup inventory panel interaction
+    const inventoryPanel = document.getElementById('inventoryPanel');
+    const inventoryTab = document.getElementById('inventoryTab');
+
+    if (inventoryTab && inventoryPanel) {
+        inventoryTab.addEventListener('mouseenter', () => {
+            inventoryPanel.classList.add('inventory-open');
+            inventoryTab.classList.add('inventory-open');
+            console.log('Opening inventory panel');
+        });
+
+        inventoryPanel.addEventListener('mouseleave', () => {
+            inventoryPanel.classList.remove('inventory-open');
+            inventoryTab.classList.remove('inventory-open');
+            console.log('Closing inventory panel');
+        });
+    } else {
+        console.error("Could not find inventory panel or tab elements!");
+    }
+    
     // Shape selection state variable
     let currentShapeType = 'box'; // Default shape
     
