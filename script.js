@@ -144,6 +144,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentMaterial = 'wood';   // Default material
     let currentSize = 'medium';     // Default size
     
+    // Variables for drag-and-throw mechanics
+    let isDragging = false;
+    let startDragPos = null;
+    let startDragTime = null;
+    
+    // NEW state for inventory drag
+    let isDraggingFromInventory = false;
+    let draggedShapeType = null; // Which shape is being dragged from panel
+    let ghostElement = null; // Reference to the visual ghost element
+    let inventoryDragStartPos = null; // Store start pos for potential velocity calc later
+    let dragStartTimeout = null; // Variable to hold the timeout ID
+    
     // Add event listeners to shape selection buttons
     const shapeButtons = document.querySelectorAll('#panelShapeSelector .shapeBtn');
     
@@ -160,19 +172,94 @@ document.addEventListener('DOMContentLoaded', function() {
             activeButton.classList.add('active');
         }
         
-        // Add click event to each shape button
+        // ADD MOUSEDOWN LISTENER TO SHAPE BUTTONS
         shapeButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                event.stopPropagation();
-                currentShapeType = button.dataset.shape;
-                console.log('Selected shape:', currentShapeType);
-                updateActiveButton(button);
-            });
+            if (button) {
+                button.addEventListener('mousedown', (event) => {
+                    event.stopPropagation(); // Keep this
+
+                    const shape = button.dataset.shape;
+                    console.log(`Shape button mousedown: ${shape}`);
+
+                    // Immediately select the shape on mousedown
+                    currentShapeType = shape;
+                    updateActiveButton(button); // Update visual feedback for selection
+
+                    // Store potential drag info
+                    inventoryDragStartPos = { x: event.clientX, y: event.clientY };
+                    draggedShapeType = shape; // Store the shape being dragged
+
+                    // --- Logic to differentiate click vs drag ---
+                    // Set a short timeout. If mouseup happens before this, it's a click.
+                    // If timeout fires, start the drag visually.
+                    clearTimeout(dragStartTimeout); // Clear any previous timeout
+                    dragStartTimeout = setTimeout(() => {
+                        console.log(`Starting DRAG from inventory for: ${draggedShapeType}`);
+                        isDraggingFromInventory = true; // Set the global flag
+
+                        // Create ghost element for drag visual feedback
+                        createGhostElement(event.clientX, event.clientY, draggedShapeType);
+
+                    }, 150); // Adjust timeout duration (milliseconds) as needed
+
+                    // Prevent default browser drag behavior for the button/image
+                    event.preventDefault();
+                });
+            }
         });
         
         // Set default active button (first button)
         if (shapeButtons[0]) {
             shapeButtons[0].classList.add('active');
+        }
+    }
+    
+    // Functions for ghost element (drag visualization)
+    function createGhostElement(x, y, shapeType) {
+        if (ghostElement) ghostElement.remove(); // Remove any previous ghost
+
+        ghostElement = document.createElement('div');
+        ghostElement.id = 'dragGhost'; // Assign an ID for styling
+        ghostElement.style.position = 'fixed'; // Use fixed to position relative to viewport
+        ghostElement.style.left = `${x}px`;
+        ghostElement.style.top = `${y}px`;
+        ghostElement.style.pointerEvents = 'none'; // Allow clicks/mouse events to pass through
+        ghostElement.style.zIndex = '100'; // Ensure it's above everything
+        ghostElement.style.opacity = '0.7'; // Make it slightly transparent
+
+        // --- Style based on shapeType ---
+        // These dimensions should ideally match the *medium* size visually
+        const ghostSize = 50; // Example base size
+        ghostElement.style.width = `${ghostSize}px`;
+        ghostElement.style.height = `${ghostSize}px`;
+        ghostElement.style.backgroundColor = '#aaa'; // Generic color
+        ghostElement.style.border = '1px dashed #333';
+
+        if (shapeType === 'circle') {
+            ghostElement.style.borderRadius = '50%';
+        } else if (shapeType === 'box') {
+            ghostElement.style.borderRadius = '0'; // Square corners
+        }
+        // Add styles for other shapes later
+
+        // Adjust position slightly so cursor isn't directly over top-left corner
+        ghostElement.style.transform = 'translate(-50%, -50%)';
+
+        document.body.appendChild(ghostElement);
+        console.log("Ghost element created");
+    }
+
+    function updateGhostElement(x, y) {
+        if (!ghostElement) return;
+        ghostElement.style.left = `${x}px`;
+        ghostElement.style.top = `${y}px`;
+    }
+
+    function removeGhostElement() {
+        if (ghostElement) {
+            ghostElement.remove();
+            ghostElement = null;
+            console.log("Ghost element removed");
         }
     }
     
@@ -221,11 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set initial active size button
     const initialActiveSize = document.querySelector(`#panelSizeSelector .sizeBtn[data-size="${currentSize}"]`);
     updateActiveSizeButton(initialActiveSize);
-    
-    // Variables for drag-and-throw mechanics
-    let isDragging = false;
-    let startDragPos = null;
-    let startDragTime = null;
     
     // Function to spawn a shape with initial velocity
     function spawnShapeWithVelocity(x, y, velocity, shapeType, material, size) {
@@ -300,6 +382,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mouse down event - start drag
     document.addEventListener('mousedown', (event) => {
         // Only process if the click is within the canvas area and not on UI elements
+        // AND if not already dragging from inventory
+        if (isDraggingFromInventory) {
+            console.log("Ignoring canvas mousedown, inventory drag in progress.");
+            return; // Don't start a canvas drag if dragging from panel
+        }
+        
         if (event.target.id === 'simulationCanvas') {
             isDragging = true;
             startDragPos = { x: event.clientX, y: event.clientY };
@@ -308,14 +396,75 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Mouse move event - track drag
+    // Global mousemove for both canvas drag and inventory drag
     document.addEventListener('mousemove', (event) => {
+        // Handle inventory drag ghost movement
+        if (isDraggingFromInventory && ghostElement) {
+            updateGhostElement(event.clientX, event.clientY);
+        }
+        
+        // Handle canvas drag (existing functionality)
         if (!isDragging) return;
         // Optional: Draw a line or visual indicator for the drag
     });
     
-    // Mouse up event - end drag and spawn with velocity
+    // Global mouseup to handle both drag types
     document.addEventListener('mouseup', (event) => {
+        // First, handle timeout clearing for shape button clicks
+        if (dragStartTimeout) {
+            clearTimeout(dragStartTimeout);
+            dragStartTimeout = null;
+            console.log("Mouseup before drag timeout - treated as click.");
+        }
+
+        // Handle end of inventory drag
+        if (isDraggingFromInventory) {
+            console.log(`Inventory drag mouseup at (${event.clientX}, ${event.clientY})`);
+
+            // Check if mouse is over the canvas
+            const canvasRect = document.getElementById('simulationCanvas').getBoundingClientRect();
+            const isOverCanvas = (
+                event.clientX >= canvasRect.left &&
+                event.clientX <= canvasRect.right &&
+                event.clientY >= canvasRect.top &&
+                event.clientY <= canvasRect.bottom
+            );
+
+            if (isOverCanvas) {
+                console.log(`Dropped over canvas! Spawning ${draggedShapeType}...`);
+
+                // Calculate position relative to canvas
+                const spawnX = event.clientX;
+                const spawnY = event.clientY;
+
+                // For simplicity, start with zero velocity for drag-drop
+                const velocity = { x: 0, y: 0 };
+
+                // Spawn the object
+                spawnShapeWithVelocity(
+                    spawnX,
+                    spawnY,
+                    velocity,
+                    draggedShapeType, // The shape type we started dragging
+                    currentMaterial, // Currently selected material
+                    currentSize      // Currently selected size
+                );
+
+            } else {
+                console.log("Dropped outside canvas, spawn cancelled.");
+            }
+
+            // Cleanup
+            removeGhostElement(); // Remove visual ghost
+            isDraggingFromInventory = false; // Reset the flag
+            draggedShapeType = null;
+            inventoryDragStartPos = null;
+            
+            // Prevent further processing of this event
+            return;
+        }
+
+        // Handle canvas drag (existing functionality)
         if (!isDragging) return;
         isDragging = false;
         
@@ -357,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset tracking variables
         startDragPos = null;
         startDragTime = null;
-    });
+    }, true); // Use capture phase to ensure this runs before other mouseups if needed
     
     // Handle window resize
     window.addEventListener('resize', function() {
