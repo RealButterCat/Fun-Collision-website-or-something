@@ -41,6 +41,19 @@ body {
     color: #333;
 }
 
+#inventoryPanel h3 {
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: #555;
+}
+
+#inventoryPanel hr {
+    margin: 15px 0;
+    border: none;
+    border-top: 1px solid #ccc;
+}
+
 /* Inventory Tab */
 #inventoryTab {
     position: fixed;
@@ -98,4 +111,37 @@ body {
     border: 2px solid #333;
     font-weight: bold;
     background-color: #d0d0d0;
+}
+
+/* Material selector within panel */
+#panelMaterialSelector,
+#panelSizeSelector {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.materialBtn,
+.sizeBtn {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.materialBtn:hover,
+.sizeBtn:hover {
+    background-color: #eee;
+}
+
+/* Active state for material and size buttons */
+.materialBtn.active,
+.sizeBtn.active {
+    background-color: #a0a0a0;
+    border-color: #555;
+    font-weight: bold;
+    color: white;
 }
