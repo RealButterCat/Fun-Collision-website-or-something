@@ -85,14 +85,65 @@ body {
     background-color: #c0c0c0;
 }
 
-/* Shape selector within panel */
-#panelShapeSelector {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 10px;
+/* Interaction Mode Selector */
+#panelInteractionMode {
+    margin: 10px 0;
+    line-height: 1.6;
+    font-size: 14px;
 }
 
+#panelInteractionMode label {
+    cursor: pointer;
+}
+
+#panelInteractionMode input[type="radio"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+/* Shape preview selector within panel */
+#panelShapeSelector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.shapePreview {
+    width: 40px; /* Example size */
+    height: 40px;
+    border: 2px solid #ccc;
+    background-color: #e0e0e0;
+    cursor: pointer; /* Indicate clickable/draggable */
+    transition: border-color 0.2s ease, transform 0.1s ease;
+    position: relative; /* For potential pseudo-elements */
+    box-sizing: border-box;
+}
+
+/* Style specific shapes */
+.shapePreview[data-shape="box"] {
+    /* Already square */
+}
+.shapePreview[data-shape="circle"] {
+    border-radius: 50%;
+}
+/* Add styles for triangle, etc. */
+
+.shapePreview:hover {
+    border-color: #888;
+}
+
+.shapePreview.active {
+    border-color: #333; /* Stronger border for active */
+    border-width: 3px; /* Example active style */
+    /* background-color: #c0c0c0; */
+}
+
+/* Optional: slight lift effect on mousedown */
+.shapePreview:active {
+    transform: scale(0.95);
+}
+
+/* Legacy Shape button styles (keeping for reference but no longer used) */
 #panelShapeSelector .shapeBtn {
     padding: 8px 12px;
     cursor: pointer;
