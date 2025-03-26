@@ -125,11 +125,14 @@ body {
 .materialBtn,
 .sizeBtn {
     padding: 5px 10px;
-    border: 1px solid #ccc;
+    border: 2px solid #ccc;
     background-color: #fff;
     cursor: pointer;
     border-radius: 3px;
     transition: background-color 0.2s ease, border-color 0.2s ease;
+    min-width: 70px;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 .materialBtn:hover,
@@ -141,7 +144,7 @@ body {
 .materialBtn.active,
 .sizeBtn.active {
     background-color: #a0a0a0;
-    border-color: #555;
+    border: 2px solid #555;
     font-weight: bold;
     color: white;
 }
