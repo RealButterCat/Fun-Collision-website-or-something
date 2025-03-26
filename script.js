@@ -482,12 +482,20 @@ document.addEventListener('DOMContentLoaded', function() {
                      const dy = endDragPos.y - inventoryDragStartPos.y;
                      console.log(`Raw dx: ${dx.toFixed(0)}, dy: ${dy.toFixed(0)}, duration: ${dragDuration.toFixed(3)}s`); // Log raw values
 
-                     // --- Proceed with velocity calculation (Phase 2 will modify this) ---
+                     // --- Improved velocity calculation with distance threshold (Approach B) ---
+                     const distanceSq = dx * dx + dy * dy; // Calculate squared distance (faster than sqrt)
+                     const minDistanceSqForThrow = 50 * 50; // Adjust threshold (pixels squared) - e.g., 50px minimum drag distance
+
                      const velocityScale = 0.025;
                      let velocityX = 0, velocityY = 0;
-                     if (dragDuration > 0.02) { // Your existing check
+
+                     // Check BOTH distance and duration to avoid division by zero
+                     if (distanceSq > minDistanceSqForThrow && dragDuration > 0.02) {
                          velocityX = (dx / dragDuration) * velocityScale;
                          velocityY = (dy / dragDuration) * velocityScale;
+                     } else {
+                         console.log("Drag distance or duration too short, treating as drop (zero velocity).");
+                         // Velocity remains 0, 0
                      }
                      console.log(`Calculated Velocity: vx=${velocityX.toFixed(2)}, vy=${velocityY.toFixed(2)}`); // Log calculated velocity
                 
