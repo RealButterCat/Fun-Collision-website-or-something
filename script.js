@@ -139,8 +139,10 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error("Could not find inventory panel or tab elements!");
     }
     
-    // Shape selection state variable
-    let currentShapeType = 'box'; // Default shape
+    // State variables for shape, material, and size selection
+    let currentShapeType = 'box';   // Default shape
+    let currentMaterial = 'wood';   // Default material
+    let currentSize = 'medium';     // Default size
     
     // Add event listeners to shape selection buttons
     const shapeButtons = document.querySelectorAll('#panelShapeSelector .shapeBtn');
@@ -174,13 +176,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Add event listeners to material selection buttons
+    const materialButtons = document.querySelectorAll('#panelMaterialSelector .materialBtn');
+    
+    function updateActiveMaterialButton(selectedButton) {
+        materialButtons.forEach(btn => btn.classList.remove('active'));
+        if (selectedButton) selectedButton.classList.add('active');
+    }
+    
+    materialButtons.forEach(button => {
+        if (button) { // Null check
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                currentMaterial = button.dataset.material;
+                console.log('Selected material:', currentMaterial);
+                updateActiveMaterialButton(button);
+            });
+        }
+    });
+    
+    // Set initial active material button
+    const initialActiveMaterial = document.querySelector(`#panelMaterialSelector .materialBtn[data-material="${currentMaterial}"]`);
+    updateActiveMaterialButton(initialActiveMaterial);
+    
+    // Add event listeners to size selection buttons
+    const sizeButtons = document.querySelectorAll('#panelSizeSelector .sizeBtn');
+    
+    function updateActiveSizeButton(selectedButton) {
+        sizeButtons.forEach(btn => btn.classList.remove('active'));
+        if (selectedButton) selectedButton.classList.add('active');
+    }
+    
+    sizeButtons.forEach(button => {
+        if (button) { // Null check
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                currentSize = button.dataset.size;
+                console.log('Selected size:', currentSize);
+                updateActiveSizeButton(button);
+            });
+        }
+    });
+    
+    // Set initial active size button
+    const initialActiveSize = document.querySelector(`#panelSizeSelector .sizeBtn[data-size="${currentSize}"]`);
+    updateActiveSizeButton(initialActiveSize);
+    
     // Variables for drag-and-throw mechanics
     let isDragging = false;
     let startDragPos = null;
     let startDragTime = null;
     
     // Function to spawn a shape with initial velocity
-    function spawnShapeWithVelocity(x, y, velocity) {
+    function spawnShapeWithVelocity(x, y, velocity, shapeType, material, size) {
+        console.log(`--- Inside spawnShapeWithVelocity ---`);
+        console.log(`Shape: ${shapeType}, Material: ${material}, Size: ${size}`); // Log received values
+        console.log(`Coords: ${x}, ${y}, Velocity:`, velocity);
+        
         // Prevent extreme velocities that might cause tunneling
         const maxVelocity = 25; // Maximum velocity magnitude
         if (Math.abs(velocity.x) > maxVelocity) {
@@ -190,19 +242,19 @@ document.addEventListener('DOMContentLoaded', function() {
             velocity.y = Math.sign(velocity.y) * maxVelocity;
         }
         
-        const defaultSize = 50; // Default size parameter
+        const baseDimension = 50; // Keep using a base size for now
         let newBody;
         
         // Generate a random color for the shape
         const color = '#' + Math.floor(Math.random() * 16777215).toString(16);
         
         // Create appropriate shape based on selection
-        if (currentShapeType === 'box') {
+        if (shapeType === 'box') {
             newBody = Bodies.rectangle(
                 x, 
                 y, 
-                defaultSize, 
-                defaultSize, 
+                baseDimension, 
+                baseDimension, 
                 {
                     restitution: 0.8, // Bounciness
                     friction: 0.3,    // Friction
@@ -211,8 +263,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             );
-        } else if (currentShapeType === 'circle') {
-            const radius = defaultSize / 2;
+            console.log('Created rectangle:', newBody);
+        } else if (shapeType === 'circle') {
+            const radius = baseDimension / 2;
             newBody = Bodies.circle(
                 x, 
                 y, 
@@ -225,16 +278,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             );
+            console.log('Created circle:', newBody);
         }
         
         if (newBody) {
-            // Add the shape to the world
-            World.add(world, newBody);
-            console.log(`Spawned ${currentShapeType} at ${x}, ${y}`);
+            // TODO LATER: Apply material properties (friction, restitution, render style)
+            // TODO LATER: Apply actual size scaling based on 'size' parameter
             
-            // Apply the calculated velocity
+            console.log('Attempting to add body to world:', newBody);
+            World.add(world, newBody);
+            console.log('Body added to world.');
+            
+            console.log('Attempting to set velocity:', velocity);
             Body.setVelocity(newBody, velocity);
-            console.log(`Applied velocity: vx=${velocity.x.toFixed(2)}, vy=${velocity.y.toFixed(2)}`);
+            console.log('Velocity set.');
+        } else {
+            console.error('Failed to create body! shapeType might be invalid:', shapeType);
         }
     }
     
@@ -282,8 +341,18 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`Duration: ${dragDuration.toFixed(3)}s, dx: ${dx}, dy: ${dy}`);
         console.log(`Calculated Velocity: vx=${velocityX.toFixed(2)}, vy=${velocityY.toFixed(2)}`);
         
+        // Log the current selections before spawning
+        console.log(`Attempting to spawn: Shape=${currentShapeType}, Material=${currentMaterial}, Size=${currentSize}`);
+        
         // Spawn the shape at the end position with calculated velocity
-        spawnShapeWithVelocity(endDragPos.x, endDragPos.y, { x: velocityX, y: velocityY });
+        spawnShapeWithVelocity(
+            endDragPos.x,
+            endDragPos.y,
+            { x: velocityX, y: velocityY },
+            currentShapeType,
+            currentMaterial,
+            currentSize
+        );
         
         // Reset tracking variables
         startDragPos = null;
