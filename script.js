@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const World = Matter.World;
     const Bodies = Matter.Bodies;
     const Runner = Matter.Runner;
+    const Body = Matter.Body; // Added for velocity control
     
     // Create engine
     const engine = Engine.create();
@@ -87,32 +88,136 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add all static bodies to the world
     World.add(world, [floor, leftWall, rightWall, ceiling]);
     
-    // Add click event listener to spawn objects
-    document.addEventListener('mousedown', function(event) {
-        const boxSize = 50; // Size of the box
+    // Shape selection state variable
+    let currentShapeType = 'box'; // Default shape
+    
+    // Add event listeners to shape selection buttons
+    document.getElementById('selectBox').addEventListener('click', () => {
+        currentShapeType = 'box';
+        console.log('Selected shape:', currentShapeType);
         
-        // Generate a random color for the box
+        // Visual feedback for active button (optional)
+        document.getElementById('selectBox').classList.add('active');
+        document.getElementById('selectCircle').classList.remove('active');
+    });
+    
+    document.getElementById('selectCircle').addEventListener('click', () => {
+        currentShapeType = 'circle';
+        console.log('Selected shape:', currentShapeType);
+        
+        // Visual feedback for active button (optional)
+        document.getElementById('selectCircle').classList.add('active');
+        document.getElementById('selectBox').classList.remove('active');
+    });
+    
+    // Set default active button
+    document.getElementById('selectBox').classList.add('active');
+    
+    // Variables for drag-and-throw mechanics
+    let isDragging = false;
+    let startDragPos = null;
+    let startDragTime = null;
+    
+    // Function to spawn a shape with initial velocity
+    function spawnShapeWithVelocity(x, y, velocity) {
+        const defaultSize = 50; // Default size parameter
+        let newBody;
+        
+        // Generate a random color for the shape
         const color = '#' + Math.floor(Math.random() * 16777215).toString(16);
         
-        // Create a new box at the mouse position
-        const newBox = Bodies.rectangle(
-            event.clientX,
-            event.clientY,
-            boxSize,
-            boxSize,
-            {
-                restitution: 0.8, // Bounciness
-                friction: 0.3,    // Friction
-                render: {
-                    fillStyle: color
+        // Create appropriate shape based on selection
+        if (currentShapeType === 'box') {
+            newBody = Bodies.rectangle(
+                x, 
+                y, 
+                defaultSize, 
+                defaultSize, 
+                {
+                    restitution: 0.8, // Bounciness
+                    friction: 0.3,    // Friction
+                    render: {
+                        fillStyle: color
+                    }
                 }
-            }
-        );
+            );
+        } else if (currentShapeType === 'circle') {
+            const radius = defaultSize / 2;
+            newBody = Bodies.circle(
+                x, 
+                y, 
+                radius, 
+                {
+                    restitution: 0.8, // Bounciness
+                    friction: 0.3,    // Friction
+                    render: {
+                        fillStyle: color
+                    }
+                }
+            );
+        }
         
-        // Add the box to the world
-        World.add(world, newBox);
+        if (newBody) {
+            // Add the shape to the world
+            World.add(world, newBody);
+            console.log(`Spawned ${currentShapeType} at ${x}, ${y}`);
+            
+            // Apply the calculated velocity
+            Body.setVelocity(newBody, velocity);
+            console.log(`Applied velocity: vx=${velocity.x.toFixed(2)}, vy=${velocity.y.toFixed(2)}`);
+        }
+    }
+    
+    // Mouse down event - start drag
+    document.addEventListener('mousedown', (event) => {
+        // Only process if the click is within the canvas area and not on UI elements
+        if (event.target.id === 'simulationCanvas') {
+            isDragging = true;
+            startDragPos = { x: event.clientX, y: event.clientY };
+            startDragTime = Date.now();
+            console.log('Drag Start:', startDragPos);
+        }
+    });
+    
+    // Mouse move event - track drag
+    document.addEventListener('mousemove', (event) => {
+        if (!isDragging) return;
+        // Optional: Draw a line or visual indicator for the drag
+    });
+    
+    // Mouse up event - end drag and spawn with velocity
+    document.addEventListener('mouseup', (event) => {
+        if (!isDragging) return;
+        isDragging = false;
         
-        console.log('Object spawned at:', event.clientX, event.clientY);
+        const endDragPos = { x: event.clientX, y: event.clientY };
+        const endDragTime = Date.now();
+        const dragDuration = (endDragTime - startDragTime) / 1000; // Duration in seconds
+        
+        // Calculate displacement vector
+        const dx = endDragPos.x - startDragPos.x;
+        const dy = endDragPos.y - startDragPos.y;
+        
+        // Calculate velocity vector (scale as needed to feel right)
+        const velocityScale = 0.03; // Tuning parameter
+        let velocityX = 0;
+        let velocityY = 0;
+        
+        if (dragDuration > 0.01) { // Avoid division by zero or tiny durations
+            velocityX = (dx / dragDuration) * velocityScale;
+            velocityY = (dy / dragDuration) * velocityScale;
+        }
+        
+        console.log('Drag End:', endDragPos);
+        console.log(`Duration: ${dragDuration.toFixed(3)}s, dx: ${dx}, dy: ${dy}`);
+        console.log(`Calculated Velocity: vx=${velocityX.toFixed(2)}, vy=${velocityY.toFixed(2)}`);
+        
+        // Spawn the shape at the end position with calculated velocity
+        spawnShapeWithVelocity(endDragPos.x, endDragPos.y, { x: velocityX, y: velocityY });
+        
+        // Reset tracking variables
+        startDragPos = null;
+        startDragTime = null;
     });
     
     // Handle window resize
