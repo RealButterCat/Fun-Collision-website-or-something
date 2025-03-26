@@ -122,27 +122,44 @@ document.addEventListener('DOMContentLoaded', function() {
     // Shape selection state variable
     let currentShapeType = 'box'; // Default shape
     
-    // Add event listeners to shape selection buttons
-    document.getElementById('selectBox').addEventListener('click', () => {
-        currentShapeType = 'box';
-        console.log('Selected shape:', currentShapeType);
-        
-        // Visual feedback for active button (optional)
-        document.getElementById('selectBox').classList.add('active');
-        document.getElementById('selectCircle').classList.remove('active');
+    // Inventory panel interaction
+    const inventoryPanel = document.getElementById('inventoryPanel');
+    const inventoryTab = document.getElementById('inventoryTab');
+    
+    // Event listeners for panel hover interaction
+    inventoryTab.addEventListener('mouseenter', () => {
+        inventoryPanel.classList.add('inventory-open');
     });
     
-    document.getElementById('selectCircle').addEventListener('click', () => {
-        currentShapeType = 'circle';
-        console.log('Selected shape:', currentShapeType);
-        
-        // Visual feedback for active button (optional)
-        document.getElementById('selectCircle').classList.add('active');
-        document.getElementById('selectBox').classList.remove('active');
+    inventoryPanel.addEventListener('mouseleave', () => {
+        inventoryPanel.classList.remove('inventory-open');
     });
     
-    // Set default active button
-    document.getElementById('selectBox').classList.add('active');
+    // Shape selection with the new panel buttons
+    const shapeButtons = document.querySelectorAll('#panelShapeSelector .shapeBtn');
+    
+    // Function to update button active states
+    function updateActiveButton(selectedButton) {
+        shapeButtons.forEach(btn => btn.classList.remove('active')); // Remove active from all
+        if (selectedButton) {
+             selectedButton.classList.add('active'); // Add active to the clicked one
+        }
+    }
+    
+    shapeButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            // Prevent click from propagating to canvas if panel is over it
+            event.stopPropagation();
+    
+            currentShapeType = button.dataset.shape; // Use dataset
+            console.log('Selected shape:', currentShapeType);
+            updateActiveButton(button); // Update visual feedback
+        });
+    });
+    
+    // Set initial active button based on default shape
+    const initialActiveButton = document.querySelector(`#panelShapeSelector .shapeBtn[data-shape="${currentShapeType}"]`);
+    updateActiveButton(initialActiveButton);
     
     // Variables for drag-and-throw mechanics
     let isDragging = false;
