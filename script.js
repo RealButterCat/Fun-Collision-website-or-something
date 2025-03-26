@@ -19,8 +19,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const world = engine.world;
     
     // Create renderer
+    const canvas = document.getElementById('simulationCanvas');
+    if (!canvas) {
+        console.error("ERROR: Could not find #simulationCanvas");
+        return; // Exit early if canvas not found
+    }
+    
     const render = Render.create({
-        canvas: document.getElementById('simulationCanvas'),
+        canvas: canvas,
         engine: engine,
         options: {
             width: window.innerWidth,
@@ -122,44 +128,71 @@ document.addEventListener('DOMContentLoaded', function() {
     // Shape selection state variable
     let currentShapeType = 'box'; // Default shape
     
-    // Inventory panel interaction
+    // Inventory panel interaction - WITH NULL CHECKS
     const inventoryPanel = document.getElementById('inventoryPanel');
     const inventoryTab = document.getElementById('inventoryTab');
     
-    // Event listeners for panel hover interaction
-    inventoryTab.addEventListener('mouseenter', () => {
-        inventoryPanel.classList.add('inventory-open');
-    });
+    // Debug: Check if the elements exist
+    if (!inventoryPanel) {
+        console.error("ERROR: Could not find #inventoryPanel");
+    }
     
-    inventoryPanel.addEventListener('mouseleave', () => {
-        inventoryPanel.classList.remove('inventory-open');
-    });
+    if (!inventoryTab) {
+        console.error("ERROR: Could not find #inventoryTab");
+    }
     
-    // Shape selection with the new panel buttons
+    // Event listeners for panel hover interaction - WITH NULL CHECKS
+    if (inventoryTab && inventoryPanel) {
+        inventoryTab.addEventListener('mouseenter', () => {
+            console.log('Tab mouseenter triggered');
+            inventoryPanel.classList.add('inventory-open');
+        });
+        
+        inventoryPanel.addEventListener('mouseleave', () => {
+            console.log('Panel mouseleave triggered');
+            inventoryPanel.classList.remove('inventory-open');
+        });
+    }
+    
+    // Shape selection with the new panel buttons - WITH NULL CHECKS
+    const panelShapeSelector = document.getElementById('panelShapeSelector');
+    if (!panelShapeSelector) {
+        console.error("ERROR: Could not find #panelShapeSelector");
+    }
+    
     const shapeButtons = document.querySelectorAll('#panelShapeSelector .shapeBtn');
+    console.log(`Found ${shapeButtons.length} shape buttons`);
     
     // Function to update button active states
     function updateActiveButton(selectedButton) {
-        shapeButtons.forEach(btn => btn.classList.remove('active')); // Remove active from all
-        if (selectedButton) {
-             selectedButton.classList.add('active'); // Add active to the clicked one
+        if (!selectedButton) {
+            console.warn("Warning: No button provided to updateActiveButton");
+            return;
         }
+        
+        shapeButtons.forEach(btn => btn.classList.remove('active')); // Remove active from all
+        selectedButton.classList.add('active'); // Add active to the clicked one
     }
     
-    shapeButtons.forEach(button => {
+    shapeButtons.forEach((button, index) => {
         button.addEventListener('click', (event) => {
             // Prevent click from propagating to canvas if panel is over it
             event.stopPropagation();
-    
+            
+            console.log(`Button ${index} clicked`);
             currentShapeType = button.dataset.shape; // Use dataset
             console.log('Selected shape:', currentShapeType);
             updateActiveButton(button); // Update visual feedback
         });
     });
     
-    // Set initial active button based on default shape
+    // Set initial active button based on default shape - WITH NULL CHECK
     const initialActiveButton = document.querySelector(`#panelShapeSelector .shapeBtn[data-shape="${currentShapeType}"]`);
-    updateActiveButton(initialActiveButton);
+    if (!initialActiveButton) {
+        console.warn(`Warning: Could not find button with data-shape="${currentShapeType}"`);
+    } else {
+        updateActiveButton(initialActiveButton);
+    }
     
     // Variables for drag-and-throw mechanics
     let isDragging = false;
@@ -291,4 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Recreate boundaries with new dimensions
         createBoundaries();
     });
+    
+    // Log that initialization is complete
+    console.log("Initialization complete - check for any error messages above");
 });
