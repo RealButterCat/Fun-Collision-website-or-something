@@ -13,3 +13,138 @@ body {
     height: 100vh;
     border: 1px solid #ccc; /* Temporary border for development */
 }
+
+/* Inventory Panel */
+#inventoryPanel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 220px;
+    height: 100vh;
+    background-color: #f0f0f0;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    transform: translateX(-100%); /* Hidden */
+    transition: transform 0.3s ease-in-out;
+    z-index: 10;
+    overflow-y: auto; /* Allow scrolling if needed */
+    box-sizing: border-box; /* Include padding in width */
+}
+
+#inventoryPanel.inventory-open {
+    transform: translateX(0); /* Visible */
+}
+
+#inventoryPanel h2 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+#inventoryPanel h3 {
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: #555;
+}
+
+#inventoryPanel hr {
+    margin: 15px 0;
+    border: none;
+    border-top: 1px solid #ccc;
+}
+
+/* Inventory Tab */
+#inventoryTab {
+    position: fixed;
+    top: 20px;
+    left: 0;
+    width: 40px;
+    height: 50px;
+    background-color: #d0d0d0;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    transition: left 0.3s ease-in-out, background-color 0.2s ease;
+}
+
+#inventoryTab.inventory-open {
+    left: 220px; /* Match the width of #inventoryPanel */
+}
+
+#inventoryTab span {
+    font-size: 20px;
+}
+
+#inventoryTab:hover {
+    background-color: #c0c0c0;
+}
+
+/* Shape selector within panel */
+#panelShapeSelector {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#panelShapeSelector .shapeBtn {
+    padding: 8px 12px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+#panelShapeSelector .shapeBtn:hover {
+    background-color: #e0e0e0;
+}
+
+#panelShapeSelector .shapeBtn.active {
+    border: 2px solid #333;
+    font-weight: bold;
+    background-color: #d0d0d0;
+}
+
+/* Material selector within panel */
+#panelMaterialSelector,
+#panelSizeSelector {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.materialBtn,
+.sizeBtn {
+    padding: 5px 10px;
+    border: 2px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    min-width: 70px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.materialBtn:hover,
+.sizeBtn:hover {
+    background-color: #eee;
+}
+
+/* Active state for material and size buttons */
+.materialBtn.active,
+.sizeBtn.active {
+    background-color: #a0a0a0;
+    border: 2px solid #555;
+    font-weight: bold;
+    color: white;
+}

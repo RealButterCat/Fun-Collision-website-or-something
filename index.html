@@ -7,6 +7,39 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Inventory Activation Tab -->
+    <div id="inventoryTab">
+        <span>☰</span> <!-- Or an icon/text like "Objects" -->
+    </div>
+
+    <!-- Inventory Panel (Initially Hidden) -->
+    <div id="inventoryPanel">
+        <h2>Objects</h2>
+        <div id="panelShapeSelector">
+            <button class="shapeBtn" data-shape="box">Box</button>
+            <button class="shapeBtn" data-shape="circle">Circle</button>
+            <!-- Add more shape buttons later -->
+        </div>
+        <!-- Material Selection -->
+        <hr>
+        <h3>Material</h3>
+        <div id="panelMaterialSelector">
+            <button class="materialBtn" data-material="wood">Wood</button>
+            <button class="materialBtn" data-material="stone">Stone</button>
+            <button class="materialBtn" data-material="glass">Glass</button>
+            <button class="materialBtn" data-material="rubber">Rubber</button>
+            <button class="materialBtn" data-material="metal">Metal</button>
+        </div>
+        <!-- Size Selection -->
+        <hr>
+        <h3>Size</h3>
+        <div id="panelSizeSelector">
+            <button class="sizeBtn" data-size="small">Small</button>
+            <button class="sizeBtn" data-size="medium">Medium</button>
+            <button class="sizeBtn" data-size="large">Large</button>
+        </div>
+    </div>
+    
     <canvas id="simulationCanvas"></canvas>
     
     <!-- Matter.js Physics Engine -->
