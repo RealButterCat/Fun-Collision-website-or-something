@@ -11,8 +11,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const Runner = Matter.Runner;
     const Body = Matter.Body; // Added for velocity control
     
-    // Create engine
-    const engine = Engine.create();
+    // Create engine with improved solver settings to prevent tunneling
+    const engine = Engine.create({
+        positionIterations: 8,  // Default is 6, increasing helps prevent tunneling
+        velocityIterations: 8   // Default is 4, increasing helps prevent tunneling
+    });
     const world = engine.world;
     
     // Create renderer
@@ -45,48 +48,76 @@ document.addEventListener('DOMContentLoaded', function() {
     const runner = Runner.create();
     Runner.run(runner, engine);
     
-    // Create static boundaries (floor and walls)
-    const floorThickness = 60;
-    const wallThickness = 60;
+    // Create static boundaries (floor and walls) with increased thickness to prevent tunneling
+    const wallThickness = 80; // Increased from 60 to prevent tunneling
     
-    // Floor (positioned at bottom)
-    const floor = Bodies.rectangle(
-        window.innerWidth / 2,
-        window.innerHeight - floorThickness / 2,
-        window.innerWidth,
-        floorThickness,
-        { isStatic: true, render: { fillStyle: '#cccccc' } }
-    );
+    // Variables to store boundary objects so we can access them later
+    let floor, leftWall, rightWall, ceiling;
     
-    // Left wall
-    const leftWall = Bodies.rectangle(
-        wallThickness / 2,
-        window.innerHeight / 2,
-        wallThickness,
-        window.innerHeight,
-        { isStatic: true, render: { fillStyle: '#cccccc' } }
-    );
+    // Function to create boundaries with the current window dimensions
+    function createBoundaries() {
+        // Floor (positioned at bottom)
+        floor = Bodies.rectangle(
+            window.innerWidth / 2,
+            window.innerHeight - wallThickness / 2,
+            window.innerWidth,
+            wallThickness,
+            { 
+                isStatic: true, 
+                render: { fillStyle: '#cccccc' },
+                friction: 0.1,
+                frictionStatic: 0.5
+            }
+        );
+        
+        // Left wall
+        leftWall = Bodies.rectangle(
+            wallThickness / 2,
+            window.innerHeight / 2,
+            wallThickness,
+            window.innerHeight,
+            { 
+                isStatic: true, 
+                render: { fillStyle: '#cccccc' },
+                friction: 0.1,
+                frictionStatic: 0.5
+            }
+        );
+        
+        // Right wall
+        rightWall = Bodies.rectangle(
+            window.innerWidth - wallThickness / 2,
+            window.innerHeight / 2,
+            wallThickness,
+            window.innerHeight,
+            { 
+                isStatic: true, 
+                render: { fillStyle: '#cccccc' },
+                friction: 0.1,
+                frictionStatic: 0.5
+            }
+        );
+        
+        // Ceiling
+        ceiling = Bodies.rectangle(
+            window.innerWidth / 2,
+            wallThickness / 2,
+            window.innerWidth,
+            wallThickness,
+            { 
+                isStatic: true, 
+                render: { fillStyle: '#cccccc' },
+                friction: 0.1,
+                frictionStatic: 0.5
+            }
+        );
+        
+        // Add all static bodies to the world
+        World.add(world, [floor, leftWall, rightWall, ceiling]);
+    }
     
-    // Right wall
-    const rightWall = Bodies.rectangle(
-        window.innerWidth - wallThickness / 2,
-        window.innerHeight / 2,
-        wallThickness,
-        window.innerHeight,
-        { isStatic: true, render: { fillStyle: '#cccccc' } }
-    );
-    
-    // Ceiling
-    const ceiling = Bodies.rectangle(
-        window.innerWidth / 2,
-        floorThickness / 2,
-        window.innerWidth,
-        floorThickness,
-        { isStatic: true, render: { fillStyle: '#cccccc' } }
-    );
-    
-    // Add all static bodies to the world
-    World.add(world, [floor, leftWall, rightWall, ceiling]);
+    // Create initial boundaries
+    createBoundaries();
     
     // Shape selection state variable
     let currentShapeType = 'box'; // Default shape
@@ -120,6 +151,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to spawn a shape with initial velocity
     function spawnShapeWithVelocity(x, y, velocity) {
+        // Prevent extreme velocities that might cause tunneling
+        const maxVelocity = 25; // Maximum velocity magnitude
+        if (Math.abs(velocity.x) > maxVelocity) {
+            velocity.x = Math.sign(velocity.x) * maxVelocity;
+        }
+        if (Math.abs(velocity.y) > maxVelocity) {
+            velocity.y = Math.sign(velocity.y) * maxVelocity;
+        }
+        
         const defaultSize = 50; // Default size parameter
         let newBody;
         
@@ -199,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const dy = endDragPos.y - startDragPos.y;
         
         // Calculate velocity vector (scale as needed to feel right)
-        const velocityScale = 0.03; // Tuning parameter
+        const velocityScale = 0.025; // Reduced from 0.03 to help prevent extreme velocities
         let velocityX = 0;
         let velocityY = 0;
         
@@ -228,42 +268,10 @@ document.addEventListener('DOMContentLoaded', function() {
         render.canvas.width = window.innerWidth;
         render.canvas.height = window.innerHeight;
         
-        // Update static boundaries
+        // Remove old boundaries
         World.remove(world, [floor, leftWall, rightWall, ceiling]);
         
         // Recreate boundaries with new dimensions
-        const floorNew = Bodies.rectangle(
-            window.innerWidth / 2,
-            window.innerHeight - floorThickness / 2,
-            window.innerWidth,
-            floorThickness,
-            { isStatic: true, render: { fillStyle: '#cccccc' } }
-        );
-        
-        const leftWallNew = Bodies.rectangle(
-            wallThickness / 2,
-            window.innerHeight / 2,
-            wallThickness,
-            window.innerHeight,
-            { isStatic: true, render: { fillStyle: '#cccccc' } }
-        );
-        
-        const rightWallNew = Bodies.rectangle(
-            window.innerWidth - wallThickness / 2,
-            window.innerHeight / 2,
-            wallThickness,
-            window.innerHeight,
-            { isStatic: true, render: { fillStyle: '#cccccc' } }
-        );
-        
-        const ceilingNew = Bodies.rectangle(
-            window.innerWidth / 2,
-            floorThickness / 2,
-            window.innerWidth,
-            floorThickness,
-            { isStatic: true, render: { fillStyle: '#cccccc' } }
-        );
-        
-        World.add(world, [floorNew, leftWallNew, rightWallNew, ceilingNew]);
+        createBoundaries();
     });
 });
