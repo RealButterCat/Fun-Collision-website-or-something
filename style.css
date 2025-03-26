@@ -13,3 +13,34 @@ body {
     height: 100vh;
     border: 1px solid #ccc; /* Temporary border for development */
 }
+
+/* Shape Selector Styling */
+#shapeSelector {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+#shapeSelector button {
+    margin-right: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+#shapeSelector button:hover {
+    background-color: #e0e0e0;
+}
+
+#shapeSelector button.active {
+    background-color: #d0d0d0;
+    border-color: #999;
+}
