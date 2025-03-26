@@ -143,26 +143,36 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentShapeType = 'box'; // Default shape
     
     // Add event listeners to shape selection buttons
-    document.getElementById('selectBox').addEventListener('click', () => {
-        currentShapeType = 'box';
-        console.log('Selected shape:', currentShapeType);
-        
-        // Visual feedback for active button (optional)
-        document.getElementById('selectBox').classList.add('active');
-        document.getElementById('selectCircle').classList.remove('active');
-    });
+    const shapeButtons = document.querySelectorAll('#panelShapeSelector .shapeBtn');
     
-    document.getElementById('selectCircle').addEventListener('click', () => {
-        currentShapeType = 'circle';
-        console.log('Selected shape:', currentShapeType);
+    if (shapeButtons.length === 0) {
+        console.error("ERROR: No elements found matching '#panelShapeSelector .shapeBtn'");
+    } else {
+        console.log(`Found ${shapeButtons.length} shape buttons`);
         
-        // Visual feedback for active button (optional)
-        document.getElementById('selectCircle').classList.add('active');
-        document.getElementById('selectBox').classList.remove('active');
-    });
-    
-    // Set default active button
-    document.getElementById('selectBox').classList.add('active');
+        // Function to update active button visual state
+        function updateActiveButton(activeButton) {
+            // Remove active class from all buttons
+            shapeButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to the clicked button
+            activeButton.classList.add('active');
+        }
+        
+        // Add click event to each shape button
+        shapeButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                currentShapeType = button.dataset.shape;
+                console.log('Selected shape:', currentShapeType);
+                updateActiveButton(button);
+            });
+        });
+        
+        // Set default active button (first button)
+        if (shapeButtons[0]) {
+            shapeButtons[0].classList.add('active');
+        }
+    }
     
     // Variables for drag-and-throw mechanics
     let isDragging = false;
