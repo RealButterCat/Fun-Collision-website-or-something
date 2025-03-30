@@ -460,19 +460,46 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isOverCanvas) {
                 const spawnX = event.clientX;
                 const spawnY = event.clientY;
-
-                // Calculate Velocity for Inventory Drag
-                const endDragPos = { x: event.clientX, y: event.clientY };
+                const endDragPos = { x: spawnX, y: spawnY };
                 const endDragTime = Date.now();
-                const dragDuration = (endDragTime - inventoryDragStartTime) / 1000;
-                const dx = endDragPos.x - inventoryDragStartPos.x;
-                const dy = endDragPos.y - inventoryDragStartPos.y;
-                const velocityScale = 0.025; // Use your tuned scale
+
+                // --- Add Detailed Logging ---
+                console.log('>>> Inventory Drag Calculation <<<');
+                console.log('Start Pos:', inventoryDragStartPos);
+                console.log('End Pos:', endDragPos);
+                console.log('Start Time:', inventoryDragStartTime);
+                console.log('End Time:', endDragTime);
+
+                // Check if start pos/time exist before calculating
                 let velocityX = 0, velocityY = 0;
-                if (dragDuration > 0.02) { // Avoid tiny duration division
-                    velocityX = (dx / dragDuration) * velocityScale;
-                    velocityY = (dy / dragDuration) * velocityScale;
+                if (!inventoryDragStartPos || !inventoryDragStartTime) {
+                    console.error("ERROR: Missing start position or time for inventory drag!");
+                    // Default to zero velocity if data is missing
+                    velocityX = 0;
+                    velocityY = 0;
+                } else {
+                    const dragDuration = (endDragTime - inventoryDragStartTime) / 1000;
+                    const dx = endDragPos.x - inventoryDragStartPos.x;
+                    const dy = endDragPos.y - inventoryDragStartPos.y;
+                    console.log(`Raw dx: ${dx.toFixed(0)}, dy: ${dy.toFixed(0)}, duration: ${dragDuration.toFixed(3)}s`);
+
+                    // Calculate squared distance (faster than sqrt)
+                    const distanceSq = dx * dx + dy * dy;
+                    const minDistanceSqForThrow = 50 * 50; // 50px minimum drag distance
+
+                    const velocityScale = 0.025;
+
+                    // Check BOTH distance and duration to avoid division by zero
+                    if (distanceSq > minDistanceSqForThrow && dragDuration > 0.02) {
+                        velocityX = (dx / dragDuration) * velocityScale;
+                        velocityY = (dy / dragDuration) * velocityScale;
+                    } else {
+                        console.log("Drag distance or duration too short, treating as drop (zero velocity).");
+                        // Velocity remains 0, 0
+                    }
+                    console.log(`Calculated Velocity: vx=${velocityX.toFixed(2)}, vy=${velocityY.toFixed(2)}`);
                 }
+                // --- End Logging / Calculation ---
 
                 console.log(`Spawning from inventory: ${draggedShapeType} with v=(${velocityX.toFixed(1)}, ${velocityY.toFixed(1)})`);
                 spawnShapeWithVelocity(
