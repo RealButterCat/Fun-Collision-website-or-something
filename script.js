@@ -144,37 +144,141 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentMaterial = 'wood';   // Default material
     let currentSize = 'medium';     // Default size
     
-    // Add event listeners to shape selection buttons
-    const shapeButtons = document.querySelectorAll('#panelShapeSelector .shapeBtn');
+    // Variables for drag-and-throw mechanics
+    let isDragging = false; // For canvas drag (now specific to 'clickOnCanvas' mode)
+    let startDragPos = null;
+    let startDragTime = null;
     
-    if (shapeButtons.length === 0) {
-        console.error("ERROR: No elements found matching '#panelShapeSelector .shapeBtn'");
-    } else {
-        console.log(`Found ${shapeButtons.length} shape buttons`);
+    // NEW state for interaction mode
+    let currentInteractionMode = 'dragFromInventory'; // Default mode ('dragFromInventory' or 'clickOnCanvas')
+    
+    // NEW variables for inventory drag
+    let isDraggingFromInventory = false; // Specific to 'dragFromInventory' mode
+    let dragStartTimeout = null;
+    let inventoryDragStartPos = null;
+    let inventoryDragStartTime = null;
+    let draggedShapeType = null;
+    let ghostElement = null;
+    
+    // Add mode toggle listener
+    const modeRadios = document.querySelectorAll('#panelInteractionMode input[name="interactionMode"]');
+
+    modeRadios.forEach(radio => {
+        if (radio) { // Null check
+            radio.addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    currentInteractionMode = event.target.value;
+                    console.log('Interaction Mode Changed To:', currentInteractionMode);
+
+                    // Optional: Reset any ongoing drag state when mode changes
+                    isDragging = false;
+                    isDraggingFromInventory = false;
+                    removeGhostElement(); // Clean up ghost if mode changes mid-drag
+                    clearTimeout(dragStartTimeout); // Clear drag start timeout
+                    startDragPos = null;
+                    inventoryDragStartPos = null;
+                    draggedShapeType = null;
+                }
+            });
+        }
+    });
+
+    // Set initial state based on default checked radio
+    const initialMode = document.querySelector('#panelInteractionMode input[name="interactionMode"]:checked');
+    if (initialMode) {
+        currentInteractionMode = initialMode.value;
+    }
+    console.log('Initial Interaction Mode:', currentInteractionMode);
+    
+    // Ghost element functions for dragging from inventory
+    function createGhostElement(x, y, shapeType) {
+        // Remove any existing ghost
+        removeGhostElement();
         
-        // Function to update active button visual state
-        function updateActiveButton(activeButton) {
-            // Remove active class from all buttons
-            shapeButtons.forEach(btn => btn.classList.remove('active'));
-            // Add active class to the clicked button
-            activeButton.classList.add('active');
+        // Create a new ghost element
+        ghostElement = document.createElement('div');
+        ghostElement.className = 'shape-ghost';
+        
+        // Apply shape styling based on type
+        if (shapeType === 'circle') {
+            ghostElement.style.borderRadius = '50%';
         }
         
-        // Add click event to each shape button
-        shapeButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                event.stopPropagation();
-                currentShapeType = button.dataset.shape;
-                console.log('Selected shape:', currentShapeType);
-                updateActiveButton(button);
-            });
-        });
+        // Position at cursor
+        ghostElement.style.left = `${x}px`;
+        ghostElement.style.top = `${y}px`;
         
-        // Set default active button (first button)
-        if (shapeButtons[0]) {
-            shapeButtons[0].classList.add('active');
+        // Add to body
+        document.body.appendChild(ghostElement);
+        
+        // Apply basic styles
+        ghostElement.style.position = 'absolute';
+        ghostElement.style.width = '40px';
+        ghostElement.style.height = '40px';
+        ghostElement.style.backgroundColor = '#aaaaaaaa';
+        ghostElement.style.border = '2px dashed #555';
+        ghostElement.style.transform = 'translate(-50%, -50%)';
+        ghostElement.style.pointerEvents = 'none'; // So it doesn't interfere with mouse events
+        ghostElement.style.zIndex = '100';
+    }
+    
+    function updateGhostElement(x, y) {
+        if (ghostElement) {
+            ghostElement.style.left = `${x}px`;
+            ghostElement.style.top = `${y}px`;
         }
     }
+    
+    function removeGhostElement() {
+        if (ghostElement) {
+            document.body.removeChild(ghostElement);
+            ghostElement = null;
+        }
+    }
+    
+    // Shape preview selection
+    const shapePreviews = document.querySelectorAll('#panelShapeSelector .shapePreview');
+    
+    function updateActivePreview(selectedPreview) {
+        shapePreviews.forEach(preview => preview.classList.remove('active'));
+        if (selectedPreview) selectedPreview.classList.add('active');
+    }
+    
+    shapePreviews.forEach(preview => {
+        if (preview) {
+            preview.addEventListener('mousedown', (event) => {
+                event.stopPropagation();
+                const shape = preview.dataset.shape;
+                console.log(`Shape preview mousedown: ${shape}`);
+
+                // Always select the shape on mousedown
+                currentShapeType = shape;
+                updateActivePreview(preview); // Update visual feedback
+
+                // Only start drag logic if in the correct mode
+                if (currentInteractionMode === 'dragFromInventory') {
+                    inventoryDragStartPos = { x: event.clientX, y: event.clientY };
+                    draggedShapeType = shape;
+
+                    clearTimeout(dragStartTimeout);
+                    dragStartTimeout = setTimeout(() => {
+                        console.log(`Starting DRAG from inventory for: ${draggedShapeType}`);
+                        isDraggingFromInventory = true;
+                        inventoryDragStartTime = Date.now(); // Record drag start time for velocity
+                        createGhostElement(event.clientX, event.clientY, draggedShapeType);
+                    }, 150); // Drag delay
+
+                    event.preventDefault(); // Prevent default image/div drag
+                } else {
+                    console.log("Mode is 'clickOnCanvas', only selecting shape.");
+                }
+            });
+        }
+    });
+    
+    // Set initial active shape preview
+    const initialActivePreview = document.querySelector(`#panelShapeSelector .shapePreview[data-shape="${currentShapeType}"]`);
+    updateActivePreview(initialActivePreview);
     
     // Add event listeners to material selection buttons
     const materialButtons = document.querySelectorAll('#panelMaterialSelector .materialBtn');
@@ -221,11 +325,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set initial active size button
     const initialActiveSize = document.querySelector(`#panelSizeSelector .sizeBtn[data-size="${currentSize}"]`);
     updateActiveSizeButton(initialActiveSize);
-    
-    // Variables for drag-and-throw mechanics
-    let isDragging = false;
-    let startDragPos = null;
-    let startDragTime = null;
     
     // Function to spawn a shape with initial velocity
     function spawnShapeWithVelocity(x, y, velocity, shapeType, material, size) {
@@ -298,66 +397,129 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Mouse down event - start drag
-    document.addEventListener('mousedown', (event) => {
-        // Only process if the click is within the canvas area and not on UI elements
-        if (event.target.id === 'simulationCanvas') {
-            isDragging = true;
-            startDragPos = { x: event.clientX, y: event.clientY };
-            startDragTime = Date.now();
-            console.log('Drag Start:', startDragPos);
+    const simulationCanvas = document.getElementById('simulationCanvas');
+    simulationCanvas.addEventListener('mousedown', (event) => {
+        // Check 1: Ignore if dragging from inventory
+        if (isDraggingFromInventory) {
+            console.log("Ignoring canvas mousedown, inventory drag in progress.");
+            return;
         }
+
+        // Check 2: Only proceed if in 'clickOnCanvas' mode
+        if (currentInteractionMode !== 'clickOnCanvas') {
+            console.log("Ignoring canvas mousedown, mode is not 'clickOnCanvas'.");
+            return;
+        }
+
+        console.log('--- Canvas Mousedown Fired (clickOnCanvas mode) ---', event.target);
+
+        // Check if click is actually on canvas (prevent UI clicks)
+        if (event.target !== simulationCanvas) {
+             console.log('Mousedown ignored (not on canvas element)');
+             return;
+        }
+
+        // Set state for CANVAS drag
+        isDragging = true; // Use the original canvas drag flag
+        startDragPos = { x: event.clientX, y: event.clientY };
+        startDragTime = Date.now(); // Ensure you have startDragTime if needed for velocity
+        console.log('Canvas Drag Start:', startDragPos);
+        event.preventDefault(); // Optional: prevent text selection etc.
     });
     
     // Mouse move event - track drag
     document.addEventListener('mousemove', (event) => {
-        if (!isDragging) return;
-        // Optional: Draw a line or visual indicator for the drag
+        if (isDraggingFromInventory && ghostElement) {
+            // Update inventory drag ghost position
+            updateGhostElement(event.clientX, event.clientY);
+        } else if (isDragging) { // Check the canvas drag flag
+            // Handle canvas drag mousemove (e.g., draw preview line if you have one)
+            // console.log('Canvas dragging to:', event.clientX, event.clientY);
+        }
     });
     
     // Mouse up event - end drag and spawn with velocity
     document.addEventListener('mouseup', (event) => {
-        if (!isDragging) return;
-        isDragging = false;
-        
-        const endDragPos = { x: event.clientX, y: event.clientY };
-        const endDragTime = Date.now();
-        const dragDuration = (endDragTime - startDragTime) / 1000; // Duration in seconds
-        
-        // Calculate displacement vector
-        const dx = endDragPos.x - startDragPos.x;
-        const dy = endDragPos.y - startDragPos.y;
-        
-        // Calculate velocity vector (scale as needed to feel right)
-        const velocityScale = 0.025; // Reduced from 0.03 to help prevent extreme velocities
-        let velocityX = 0;
-        let velocityY = 0;
-        
-        if (dragDuration > 0.01) { // Avoid division by zero or tiny durations
-            velocityX = (dx / dragDuration) * velocityScale;
-            velocityY = (dy / dragDuration) * velocityScale;
+        // Timeout clearing logic (for inventory drag start)
+        if (dragStartTimeout) {
+            clearTimeout(dragStartTimeout);
+            dragStartTimeout = null;
         }
-        
-        console.log('Drag End:', endDragPos);
-        console.log(`Duration: ${dragDuration.toFixed(3)}s, dx: ${dx}, dy: ${dy}`);
-        console.log(`Calculated Velocity: vx=${velocityX.toFixed(2)}, vy=${velocityY.toFixed(2)}`);
-        
-        // Log the current selections before spawning
-        console.log(`Attempting to spawn: Shape=${currentShapeType}, Material=${currentMaterial}, Size=${currentSize}`);
-        
-        // Spawn the shape at the end position with calculated velocity
-        spawnShapeWithVelocity(
-            endDragPos.x,
-            endDragPos.y,
-            { x: velocityX, y: velocityY },
-            currentShapeType,
-            currentMaterial,
-            currentSize
-        );
-        
-        // Reset tracking variables
-        startDragPos = null;
-        startDragTime = null;
-    });
+
+        // Handle end of INVENTORY drag
+        if (isDraggingFromInventory) {
+            console.log(`Inventory drag mouseup at (${event.clientX}, ${event.clientY})`);
+            const canvasRect = simulationCanvas.getBoundingClientRect();
+            const isOverCanvas = (
+                event.clientX >= canvasRect.left &&
+                event.clientX <= canvasRect.right &&
+                event.clientY >= canvasRect.top &&
+                event.clientY <= canvasRect.bottom
+            );
+
+            if (isOverCanvas) {
+                const spawnX = event.clientX;
+                const spawnY = event.clientY;
+
+                // Calculate Velocity for Inventory Drag
+                const endDragPos = { x: event.clientX, y: event.clientY };
+                const endDragTime = Date.now();
+                const dragDuration = (endDragTime - inventoryDragStartTime) / 1000;
+                const dx = endDragPos.x - inventoryDragStartPos.x;
+                const dy = endDragPos.y - inventoryDragStartPos.y;
+                const velocityScale = 0.025; // Use your tuned scale
+                let velocityX = 0, velocityY = 0;
+                if (dragDuration > 0.02) { // Avoid tiny duration division
+                    velocityX = (dx / dragDuration) * velocityScale;
+                    velocityY = (dy / dragDuration) * velocityScale;
+                }
+
+                console.log(`Spawning from inventory: ${draggedShapeType} with v=(${velocityX.toFixed(1)}, ${velocityY.toFixed(1)})`);
+                spawnShapeWithVelocity(
+                    spawnX, spawnY, { x: velocityX, y: velocityY },
+                    draggedShapeType, currentMaterial, currentSize
+                );
+            } else {
+                console.log("Inventory drag dropped outside canvas.");
+            }
+
+            // Cleanup inventory drag state
+            removeGhostElement();
+            isDraggingFromInventory = false;
+            draggedShapeType = null;
+            inventoryDragStartPos = null;
+            inventoryDragStartTime = null;
+
+        // Handle end of CANVAS drag
+        } else if (isDragging) {
+            console.log(`Canvas drag mouseup at (${event.clientX}, ${event.clientY})`);
+            const endDragPos = { x: event.clientX, y: event.clientY };
+            const endDragTime = Date.now();
+            const dragDuration = (endDragTime - startDragTime) / 1000; // Use original canvas drag times
+
+            // Calculate Velocity for Canvas Drag (should be your existing logic)
+            const dx = endDragPos.x - startDragPos.x;
+            const dy = endDragPos.y - startDragPos.y;
+            const velocityScale = 0.025; // Use your tuned scale
+            let velocityX = 0, velocityY = 0;
+            if (dragDuration > 0.02) {
+                velocityX = (dx / dragDuration) * velocityScale;
+                velocityY = (dy / dragDuration) * velocityScale;
+            }
+
+            console.log(`Spawning from canvas: ${currentShapeType} with v=(${velocityX.toFixed(1)}, ${velocityY.toFixed(1)})`);
+            // Spawn using the currently *selected* shape, material, size
+            spawnShapeWithVelocity(
+                endDragPos.x, endDragPos.y, { x: velocityX, y: velocityY },
+                currentShapeType, currentMaterial, currentSize
+            );
+
+            // Cleanup canvas drag state
+            isDragging = false;
+            startDragPos = null;
+            startDragTime = null;
+        }
+    }, true); // Use capture phase if needed
     
     // Handle window resize
     window.addEventListener('resize', function() {
