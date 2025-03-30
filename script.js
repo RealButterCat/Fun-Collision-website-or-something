@@ -159,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let inventoryDragStartTime = null;
     let draggedShapeType = null;
     let ghostElement = null;
+    let hasEnteredCanvasDuringDrag = false; // <<< ADD THIS LINE
     
     // Add mode toggle listener
     const modeRadios = document.querySelectorAll('#panelInteractionMode input[name="interactionMode"]');
@@ -429,9 +430,33 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mouse move event - track drag
     document.addEventListener('mousemove', (event) => {
-        if (isDraggingFromInventory && ghostElement) {
+        if (isDraggingFromInventory) {
             // Update inventory drag ghost position
-            updateGhostElement(event.clientX, event.clientY);
+            if (ghostElement) {
+                updateGhostElement(event.clientX, event.clientY);
+            }
+            
+            // --- Detect Canvas Entry & Reset Start Point (ADD THIS LOGIC) ---
+            if (!hasEnteredCanvasDuringDrag) { // Only check/reset once per drag
+                const canvasRect = simulationCanvas.getBoundingClientRect();
+                const isOverCanvasNow = (
+                    event.clientX >= canvasRect.left &&
+                    event.clientX <= canvasRect.right &&
+                    event.clientY >= canvasRect.top &&
+                    event.clientY <= canvasRect.bottom
+                );
+
+                if (isOverCanvasNow) {
+                    console.log(">>> Drag entered canvas - Resetting velocity reference point <<<");
+                    hasEnteredCanvasDuringDrag = true;
+                    // Reset start position and time to the CURRENT position/time
+                    // This is crucial for basing velocity on canvas movement
+                    inventoryDragStartPos = { x: event.clientX, y: event.clientY };
+                    inventoryDragStartTime = Date.now(); // Reset time too!
+                }
+            }
+            // --- End ADDED Logic ---
+            
         } else if (isDragging) { // Check the canvas drag flag
             // Handle canvas drag mousemove (e.g., draw preview line if you have one)
             // console.log('Canvas dragging to:', event.clientX, event.clientY);
@@ -460,25 +485,51 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isOverCanvas) {
                 const spawnX = event.clientX;
                 const spawnY = event.clientY;
-
-                // Calculate Velocity for Inventory Drag
-                const endDragPos = { x: event.clientX, y: event.clientY };
+                const endDragPos = { x: spawnX, y: spawnY };
                 const endDragTime = Date.now();
-                const dragDuration = (endDragTime - inventoryDragStartTime) / 1000;
-                const dx = endDragPos.x - inventoryDragStartPos.x;
-                const dy = endDragPos.y - inventoryDragStartPos.y;
-                const velocityScale = 0.025; // Use your tuned scale
-                let velocityX = 0, velocityY = 0;
-                if (dragDuration > 0.02) { // Avoid tiny duration division
-                    velocityX = (dx / dragDuration) * velocityScale;
-                    velocityY = (dy / dragDuration) * velocityScale;
-                }
 
-                console.log(`Spawning from inventory: ${draggedShapeType} with v=(${velocityX.toFixed(1)}, ${velocityY.toFixed(1)})`);
-                spawnShapeWithVelocity(
-                    spawnX, spawnY, { x: velocityX, y: velocityY },
-                    draggedShapeType, currentMaterial, currentSize
-                );
+                // --- Add Focused Logging Here ---
+                console.log('>>> Inventory Drag Calculation (Mouseup) <<<');
+                console.log('Final Start Pos (after potential reset):', inventoryDragStartPos);
+                console.log('Final End Pos:', endDragPos);
+                console.log('Final Start Time (after potential reset):', inventoryDragStartTime);
+                console.log('Final End Time:', endDragTime);
+                console.log('Was canvas entered during drag?', hasEnteredCanvasDuringDrag);
+                // --- End Focused Logging ---
+
+                // Check if start pos/time exist before calculating
+                if (!inventoryDragStartPos || !inventoryDragStartTime) {
+                     console.error("ERROR: Missing start position or time for inventory drag!");
+                     velocityX = 0; // Default to zero velocity
+                     velocityY = 0;
+                } else {
+                     const dragDuration = (endDragTime - inventoryDragStartTime) / 1000;
+                     const dx = endDragPos.x - inventoryDragStartPos.x; // Uses potentially reset startPos
+                     const dy = endDragPos.y - inventoryDragStartPos.y; // Uses potentially reset startPos
+                     console.log(`Final dx: ${dx.toFixed(0)}, dy: ${dy.toFixed(0)}, duration: ${dragDuration.toFixed(3)}s (since reset/start)`);
+
+                     const velocityScale = 0.025;
+                     let velocityX = 0, velocityY = 0;
+                     const minDurationForThrow = 0.05; // Maybe slightly shorter threshold now?
+                     const minDistanceSqForThrow = 30 * 30; // Maybe slightly smaller threshold now?
+
+                     // Use distance check (Approach B - generally better for drops)
+                     const distanceSq = dx * dx + dy * dy;
+                     if (distanceSq > minDistanceSqForThrow && dragDuration > 0.02) {
+                         velocityX = (dx / dragDuration) * velocityScale;
+                         velocityY = (dy / dragDuration) * velocityScale;
+                     } else {
+                         console.log("Movement since reset/start too small/short, treating as drop.");
+                         // Velocity remains 0, 0
+                     }
+                     console.log(`Calculated Velocity: vx=${velocityX.toFixed(2)}, vy=${velocityY.toFixed(2)}`);
+                
+                     console.log(`Spawning from inventory: ${draggedShapeType} with final v=(${velocityX.toFixed(1)}, ${velocityY.toFixed(1)})`);
+                     spawnShapeWithVelocity(
+                         spawnX, spawnY, { x: velocityX, y: velocityY },
+                         draggedShapeType, currentMaterial, currentSize
+                     );
+                }
             } else {
                 console.log("Inventory drag dropped outside canvas.");
             }
@@ -489,6 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
             draggedShapeType = null;
             inventoryDragStartPos = null;
             inventoryDragStartTime = null;
+            hasEnteredCanvasDuringDrag = false; // <<< RESET THE FLAG HERE
 
         // Handle end of CANVAS drag
         } else if (isDragging) {
