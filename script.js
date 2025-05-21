@@ -431,6 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mouse move event - track drag
     document.addEventListener('mousemove', (event) => {
+        lastMousePos = { x: event.clientX, y: event.clientY };
         if (isDraggingFromInventory) {
             // Update inventory drag ghost position
             if (ghostElement) {
