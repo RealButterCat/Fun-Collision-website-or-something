@@ -142,6 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // State variables for shape, material, and size selection
     let currentShapeType = 'box';   // Default shape
     let currentMaterial = 'wood';   // Default material
+    let lastMousePos = { x: 0, y: 0 };
     let currentSize = 'medium';     // Default size
     
     // Variables for drag-and-throw mechanics
